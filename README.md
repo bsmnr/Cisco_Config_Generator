@@ -14,8 +14,8 @@ Windows:
 
 Basic Overview of the editor in Darkmode.
 
-<img width="1917" height="883" alt="demo_live_config" src="https://github.com/user-attachments/assets/c37310a2-54dc-4d0a-a934-551f61800b4c" />
+<img width="1920" height="897" alt="demo_main" src="https://github.com/user-attachments/assets/c8f18ec1-59ab-4be1-82f7-bf6470d78169" />
 
 Screenshot of Configuration being updated as you fill in the variables.
 
-<img width="1920" height="897" alt="demo_main" src="https://github.com/user-attachments/assets/c8f18ec1-59ab-4be1-82f7-bf6470d78169" />
+<img width="1917" height="883" alt="demo_live_config" src="https://github.com/user-attachments/assets/c37310a2-54dc-4d0a-a934-551f61800b4c" />
