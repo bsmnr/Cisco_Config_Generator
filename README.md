@@ -3,6 +3,15 @@
 
 Flask, Python, Cisco, Jinja2, HTML, CSS, Js, JSON, YAML
 
+Windows:
+  cd c:\path\to\config-gen\
+  python -m venv venv
+  venv\Scripts\activate
+  pip3 install -r requirements.txt
+  python config-gen.py
+
+  Open Webbrowser and navigate to 127.0.0.1:5000
+
 
 Basic Overview of the editor in Darkmode.
 
