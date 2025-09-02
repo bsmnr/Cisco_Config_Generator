@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Config Generator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Config Generator</h1>
+        <div class="settings" onclick="toggleTheme()">&#9881;</div>
+    </header>
+
+    <!-- Jinja2 Template Editor -->
+    <div class="pane">
+        <h2>Jinja2 Template Editor</h2>
+        <div class="dropdown-row">
+            <select id="templateSelect"></select>
+            <button onclick="loadTemplate()">Load</button>
+        </div>
+        <textarea id="templateEditor"></textarea>
+        <div class="toolbar">
+            <div class="left">
+                <input type="file" id="uploadTemplateInput" style="display:none" onchange="uploadTemplate(this)">
+                <button onclick="document.getElementById('uploadTemplateInput').click()">Upload</button>
+                <button onclick="downloadTemplate()">Download</button>
+            </div>
+            <div class="right">
+                <button onclick="saveTemplate()">Save</button>
+                <button onclick="saveAsTemplate()">Save As...</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Variables -->
+    <div class="pane">
+        <h2>Variables</h2>
+        <div class="dropdown-row">
+            <select id="varsSelect"></select>
+            <button onclick="loadVars()">Load</button>
+        </div>
+        <div id="varsContainer"></div>
+        <div class="toolbar">
+            <div class="left">
+                <input type="file" id="uploadVarsInput" style="display:none" onchange="uploadVars(this)">
+                <button onclick="document.getElementById('uploadVarsInput').click()">Upload</button>
+                <button onclick="downloadVars()">Download</button>
+            </div>
+            <div class="right">
+                <button onclick="saveVars()">Save</button>
+                <button onclick="saveAsVars()">Save As...</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Generated Config -->
+    <div class="pane">
+        <h2>Generated Config</h2>
+        <pre id="configOutput"></pre>
+        <div class="toolbar">
+            <div class="left">
+                <button onclick="downloadConfig()">Download</button>
+            </div>
+            <div class="right">
+                <button onclick="saveAsConfig()">Save As...</button>
+                <button onclick="appendConfig()">Append</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- YAML Load Prompt -->
+    <div id="yamlPrompt" class="modal">
+      <div class="modal-content">
+        <p>How do you want to load this YAML file?</p>
+        <button id="yamlOverwrite">Overwrite</button>
+        <button id="yamlMerge">Merge</button>
+        <button id="yamlCancel">Cancel</button>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    transition: background-color 0.3s, color 0.3s;
+}
+header {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    text-align: center;
+    margin: 0;
+}
+
+header .settings {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+h2 {
+    text-align: center;
+}
+.settings {
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Pane layout */
+.pane {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    padding: 10px;
+    height: 300px; /* adjustable per pane */
+}
+.pane h2 {
+    margin-top: 0;
+}
+.pane textarea,
+.pane input,
+.pane select,
+.pane pre {
+    flex: 1;
+    margin-bottom: 10px;
+    resize: vertical;
+}
+
+/* Toolbar at bottom */
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto; /* pushes toolbar to bottom */
+}
+.toolbar .left,
+.toolbar .right {
+    display: flex;
+    gap: 5px;
+}
+
+/* Light mode */
+body.light {
+    background-color: #ffffff;
+    color: #000000;
+}
+body.light textarea,
+body.light input,
+body.light select,
+body.light pre {
+    background-color: #f9f9f9;
+    color: #000000;
+    border: 1px solid #ccc;
+}
+
+/* Dark mode */
+body.dark {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+body.dark textarea,
+body.dark input,
+body.dark select,
+body.dark pre {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+}
+.modal-content {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    margin: 15% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 300px;
+    text-align: center;
+}
+.modal-content button {
+    margin: 5px;
+    padding: 8px 15px;
+}
+body.light .modal-content {
+    background-color: #ffffff;
+    color: #000000;
+}
+/* Dropdown row (centered) */
+.dropdown-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+
+.dropdown-row select {
+    width: 250px;        /* narrower */
+    height: 30px;        /* single-line */
+    font-size: 14px;
+    padding: 2px 5px;
+}
+.dropdown-row button {
+    height: 32px;
+}

@@ -1,0 +1,6 @@
+interface_prefix: GigabitEthernet1/0/
+port_number: '1'
+description: 12A
+data_vlan: '200'
+voice_vlan: '300'
+bpduguard: 'no'

@@ -1,0 +1,13 @@
+!
+interface {{ interface_prefix ~ port_number }} 
+ description -> {{ description }}
+ switchport access vlan {{ data_vlan }}
+ switchport mode access
+ switchport voice vlan {{ voice_vlan }}
+ spanning-tree portfast
+ {% if bpduguard == "enabled" %}
+ spanning-tree bpduguard enable
+ {% elif bpduguard == "disabled" %}
+ no spanning-tree bpduguard
+ {% endif %}
+!
