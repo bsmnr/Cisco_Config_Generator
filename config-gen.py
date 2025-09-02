@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Brian Sumner
+# Licensed under the MIT License. See LICENSE file in the project root.
+
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from app import jinja_handler, config_renderer
