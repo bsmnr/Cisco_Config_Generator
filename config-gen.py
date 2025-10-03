@@ -4,7 +4,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from app import jinja_handler, config_renderer
+from jinja2 import Environment, meta
 import os
+import re
 
 app = Flask(__name__)
 
@@ -36,6 +38,35 @@ def load_template():
     content = jinja_handler.load_template(filename)
     variables = jinja_handler.extract_variables(content)
     return jsonify({"content": content, "scalars": variables["scalars"], "lists": variables["lists"]})
+
+@app.route("/parse_vars", methods=["POST"])
+def parse_vars():
+    data = request.get_json()
+    template_text = data.get("template", "")
+
+    env = Environment()
+    vars_found = set()
+
+    try:
+        # Try full Jinja parse
+        parsed = env.parse(template_text)
+        vars_found = meta.find_undeclared_variables(parsed)
+    except Exception:
+        # If syntax error, fall back to empty set (regex will still run)
+        vars_found = set()
+
+    # Regex scan to preserve order of first appearance
+    pattern = re.compile(r"{{\s*(\w+)\s*}}|{%\s*.*?(\w+).*?%}")
+    ordered_vars = []
+    seen = set()
+    for match in pattern.finditer(template_text):
+        var = match.group(1) or match.group(2)
+        if (not vars_found or var in vars_found) and var not in seen:
+            ordered_vars.append(var)
+            seen.add(var)
+
+    return jsonify({"variables": ordered_vars})
+
 
 @app.route("/save_template", methods=["POST"])
 def save_template():

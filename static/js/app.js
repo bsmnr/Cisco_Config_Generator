@@ -1,258 +1,177 @@
 let currentVars = {};
+let liveUpdateTimer;
+let isDirty = false; // track unsaved changes
 
-// ----------------- DROPDOWNS -----------------
-async function populateDropdowns() {
-    try {
-        let tRes = await fetch("/list_templates");
-        let templates = await tRes.json();
-        let templateSelect = document.getElementById("templateSelect");
-        templateSelect.innerHTML = "";
-        templates.forEach(f => {
-            let option = document.createElement("option");
-            option.value = f;
-            option.textContent = f;
-            templateSelect.appendChild(option);
-        });
-
-        let vRes = await fetch("/list_vars");
-        let vars = await vRes.json();
-        let varsSelect = document.getElementById("varsSelect");
-        varsSelect.innerHTML = "";
-        vars.forEach(f => {
-            let option = document.createElement("option");
-            option.value = f;
-            option.textContent = f;
-            varsSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error("Error populating dropdowns:", err);
+/* ---------------- THEME HANDLER ---------------- */
+function toggleTheme() {
+    const body = document.body;
+    if (body.classList.contains("dark")) {
+        body.classList.remove("dark");
+        body.classList.add("light");
+    } else {
+        body.classList.remove("light");
+        body.classList.add("dark");
     }
 }
 
-// ----------------- TEMPLATE HANDLING -----------------
-async function loadTemplate() {
+/* ---------------- TEMPLATE DROPDOWN ---------------- */
+async function populateTemplates() {
+    const res = await fetch("/list_templates");
+    const files = await res.json();
+    const select = document.getElementById("templateSelect");
+    select.innerHTML = "";
+
+    // Add default placeholder
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "-- Select Template --";
+    select.appendChild(defaultOption);
+
+    files.forEach(f => {
+        const option = document.createElement("option");
+        option.value = f;
+        option.textContent = f;
+        select.appendChild(option);
+    });
+
+    // Load only when user manually selects
+    select.onchange = handleTemplateChange;
+}
+
+async function handleTemplateChange() {
     const filename = document.getElementById("templateSelect").value;
     if (!filename) return;
 
-    let res = await fetch("/load_template", {
+    const editorContent = document.getElementById("templateEditor").value.trim();
+
+    // If nothing in editor and no config yet, just load
+    if (!isDirty && editorContent === "") {
+        await loadTemplate(filename);
+        return;
+    }
+
+    // Ask if user wants to save before switching
+    const confirmSave = confirm(
+        "You have unsaved changes. Do you want to save before loading a new template?"
+    );
+    if (confirmSave) {
+        if (filename) {
+            await saveTemplate();
+        } else {
+            await saveAsTemplate();
+        }
+    }
+
+    await loadTemplate(filename);
+}
+
+async function loadTemplate(filename) {
+    const res = await fetch("/load_template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename })
     });
-    let data = await res.json();
-
+    const data = await res.json();
     document.getElementById("templateEditor").value = data.content;
-
-    currentVars = {};
-    data.scalars.forEach(v => currentVars[v] = "");
-    Object.keys(data.lists).forEach(v => currentVars[v] = []);
-
-    renderVarInputs(data);
-    updateConfig();
+    isDirty = false; // reset dirty flag
+    updateVariablesAndConfig();
 }
 
-async function saveTemplate() {
-    const filename = document.getElementById("templateSelect").value;
-    const content = document.getElementById("templateEditor").value;
-    if (!filename) return;
-    await fetch("/save_template", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, content })
-    });
-    alert("Template saved: " + filename);
-}
+/* ---------------- VARS DROPDOWN ---------------- */
+async function populateVars() {
+    const res = await fetch("/list_vars");
+    const files = await res.json();
+    const select = document.getElementById("varsSelect");
+    select.innerHTML = "";
 
-async function saveAsTemplate() {
-    const oldName = document.getElementById("templateSelect").value || "new_template.j2";
-    const content = document.getElementById("templateEditor").value;
-    const newName = prompt("Enter new filename (with .j2 extension):", oldName.replace(".j2", "_copy.j2"));
-    if (!newName) return;
-    await fetch("/save_template", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newName, content })
-    });
-    await populateDropdowns();
-    document.getElementById("templateSelect").value = newName;
-    alert("Template saved as: " + newName);
-}
+    // Add default placeholder
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "-- Select Variables --";
+    select.appendChild(defaultOption);
 
-// Upload/Download
-async function uploadTemplate(input) {
-    const file = input.files[0];
-    if (!file) return;
-    let formData = new FormData();
-    formData.append("file", file);
-    await fetch("/upload_template", { method: "POST", body: formData });
-    await populateDropdowns();
-    alert("Uploaded template: " + file.name);
-}
-
-function downloadTemplate() {
-    const filename = document.getElementById("templateSelect").value;
-    if (!filename) return;
-    window.location.href = "/download_template/" + filename;
-}
-
-// ----------------- VARIABLE HANDLING -----------------
-function renderVarInputs(data) {
-    let container = document.getElementById("varsContainer");
-    container.innerHTML = "";
-
-    // Scalars
-    data.scalars.forEach(v => {
-        let label = document.createElement("label");
-        label.textContent = v + ": ";
-        let input = document.createElement("input");
-        input.placeholder = v;
-        input.value = currentVars[v] || "";
-        input.oninput = () => {
-            currentVars[v] = input.value;
-            updateConfig();
-        };
-        container.appendChild(label);
-        container.appendChild(input);
-        container.appendChild(document.createElement("br"));
-    });
-
-    // Lists
-    Object.keys(data.lists).forEach(listName => {
-        let fields = data.lists[listName];
-        if (!Array.isArray(currentVars[listName]) || currentVars[listName].length === 0) {
-            const count = parseInt(prompt(`How many ${listName}?`), 10) || 1;
-            currentVars[listName] = Array.from({ length: count }, () => {
-                let obj = {};
-                fields.forEach(f => obj[f] = "");
-                return obj;
-            });
-        }
-
-        let section = document.createElement("div");
-        section.innerHTML = `<h4>${listName}</h4>`;
-
-        currentVars[listName].forEach((item, idx) => {
-            let row = document.createElement("div");
-            fields.forEach(field => {
-                let input = document.createElement("input");
-                input.placeholder = `${listName}[${idx}].${field}`;
-                input.value = item[field] || "";
-                input.oninput = () => {
-                    currentVars[listName][idx][field] = input.value;
-                    updateConfig();
-                };
-                row.appendChild(input);
-            });
-
-            let removeBtn = document.createElement("button");
-            removeBtn.type = "button";
-            removeBtn.textContent = "Remove";
-            removeBtn.onclick = () => {
-                currentVars[listName].splice(idx, 1);
-                renderVarInputs(data);
-                updateConfig();
-            };
-            row.appendChild(removeBtn);
-
-            section.appendChild(row);
-        });
-
-        let addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.textContent = "Add " + listName;
-        addBtn.onclick = () => {
-            let obj = {};
-            fields.forEach(f => obj[f] = "");
-            currentVars[listName].push(obj);
-            renderVarInputs(data);
-            updateConfig();
-        };
-        section.appendChild(addBtn);
-
-        container.appendChild(section);
+    files.forEach(f => {
+        const option = document.createElement("option");
+        option.value = f;
+        option.textContent = f;
+        select.appendChild(option);
     });
 }
 
 async function loadVars() {
     const filename = document.getElementById("varsSelect").value;
     if (!filename) return;
-
-    let res = await fetch("/load_vars", {
+    const res = await fetch("/load_vars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename })
     });
+    const data = await res.json();
+    // fill values into variable inputs if they exist
+    Object.keys(data).forEach(k => {
+        const input = document.querySelector(`#varsContainer input[name="${k}"]`);
+        if (input) input.value = data[k];
+        currentVars[k] = data[k];
+    });
+    updateConfig();
+    isDirty = false;
+}
 
-    let loadedVars = await res.json();
-    const choice = await showYamlPrompt();
-    if (choice === "cancel") return;
+/* ---------------- TEMPLATE LIVE UPDATE ---------------- */
+function liveUpdateFromTemplate() {
+    clearTimeout(liveUpdateTimer);
+    liveUpdateTimer = setTimeout(() => {
+        updateVariablesAndConfig();
+    }, 400); // debounce typing
+    isDirty = true;
+}
 
-    if (choice === "overwrite") {
-        Object.keys(currentVars).forEach(k => {
-            currentVars[k] = loadedVars[k] || (Array.isArray(currentVars[k]) ? [] : "");
-        });
-    } else if (choice === "merge") {
-        Object.keys(currentVars).forEach(k => {
-            if (Array.isArray(currentVars[k])) {
-                if (loadedVars[k]) currentVars[k] = loadedVars[k];
-            } else {
-                if ((!currentVars[k] || currentVars[k].trim() === "") && loadedVars[k]) {
-                    currentVars[k] = loadedVars[k];
-                }
-            }
+async function updateVariablesAndConfig() {
+    const templateText = document.getElementById("templateEditor").value;
+
+    const response = await fetch("/parse_vars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: templateText })
+    });
+
+    const data = await response.json();
+    const varsContainer = document.getElementById("varsContainer");
+
+    const newVars = data.variables;
+    const currentVarsOnPage = Array.from(
+        document.querySelectorAll("#varsContainer input")
+    ).map(i => i.name);
+
+    if (JSON.stringify(newVars) !== JSON.stringify(currentVarsOnPage)) {
+        varsContainer.innerHTML = "";
+        newVars.forEach(v => {
+            const div = document.createElement("div");
+            div.className = "var-input";
+            div.innerHTML = `
+                <label for="${v}">${v}</label>
+                <input type="text" id="${v}" name="${v}"
+                       value="${currentVars[v] || ''}"
+                       oninput="collectVarsAndUpdateConfig()">
+            `;
+            varsContainer.appendChild(div);
         });
     }
 
-    renderVarInputs({
-        scalars: Object.keys(currentVars).filter(k => !Array.isArray(currentVars[k])),
-        lists: Object.fromEntries(Object.keys(currentVars).filter(k => Array.isArray(currentVars[k])).map(k => [k, []]))
+    collectVarsAndUpdateConfig();
+}
+
+/* ---------------- VARIABLE COLLECTION ---------------- */
+function collectVarsAndUpdateConfig() {
+    currentVars = {};
+    document.querySelectorAll("#varsContainer input").forEach(input => {
+        currentVars[input.name] = input.value;
     });
     updateConfig();
+    isDirty = true;
 }
 
-async function saveVars() {
-    const filename = document.getElementById("varsSelect").value;
-    if (!filename) return;
-    await fetch("/save_vars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, data: currentVars })
-    });
-    alert("Variables saved: " + filename);
-}
-
-async function saveAsVars() {
-    const oldName = document.getElementById("varsSelect").value || "variables.yaml";
-    const newName = prompt("Enter new filename (with .yaml extension):", oldName.replace(".yaml", "_copy.yaml"));
-    if (!newName) return;
-    await fetch("/save_vars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newName, data: currentVars })
-    });
-    await populateDropdowns();
-    document.getElementById("varsSelect").value = newName;
-    alert("Variables saved as: " + newName);
-}
-
-// Upload/Download
-async function uploadVars(input) {
-    const file = input.files[0];
-    if (!file) return;
-    let formData = new FormData();
-    formData.append("file", file);
-    await fetch("/upload_vars", { method: "POST", body: formData });
-    await populateDropdowns();
-    alert("Uploaded variables: " + file.name);
-}
-
-function downloadVars() {
-    const filename = document.getElementById("varsSelect").value;
-    if (!filename) return;
-    window.location.href = "/download_vars/" + filename;
-}
-
-// ----------------- CONFIG HANDLING -----------------
+/* ---------------- CONFIG RENDER ---------------- */
 async function updateConfig() {
     const template = document.getElementById("templateEditor").value;
     let res = await fetch("/render_config", {
@@ -264,75 +183,27 @@ async function updateConfig() {
     document.getElementById("configOutput").innerText = data.config;
 }
 
-async function saveAsConfig() {
-    const defaultName = document.getElementById("configName").value || "config.txt";
-    const newName = prompt("Enter new filename (with extension):", defaultName.replace(".txt", "_copy.txt"));
-    if (!newName) return;
-    const content = document.getElementById("configOutput").innerText;
-
-    await fetch("/save_config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newName, content })
-    });
-
-    document.getElementById("configName").value = newName;
-    alert("Saved config to /saved/" + newName);
+/* ---------------- MANUAL FALLBACK ---------------- */
+async function updateVariables() {
+    await updateVariablesAndConfig();
 }
 
-async function appendConfig() {
-    const filename = document.getElementById("configName").value || "config.txt";
-    const content = document.getElementById("configOutput").innerText;
-
-    await fetch("/append_config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, content })
-    });
-
-    alert("Appended config to /saved/" + filename);
-}
-
-function downloadConfig() {
-    const filename = document.getElementById("configName").value || "config.txt";
-    window.location.href = "/download_config/" + filename;
-}
-
-// ----------------- THEME -----------------
-function toggleTheme() {
-    const body = document.body;
-    if (body.classList.contains("dark")) {
-        body.classList.remove("dark");
-        body.classList.add("light");
-        localStorage.setItem("theme", "light");
-    } else {
-        body.classList.remove("light");
-        body.classList.add("dark");
-        localStorage.setItem("theme", "dark");
+/* ---------------- UNSAVED CHANGES WARNING ---------------- */
+window.addEventListener("beforeunload", function (e) {
+    if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return "You have unsaved changes. Are you sure you want to leave?";
     }
-}
-
-// ----------------- YAML PROMPT -----------------
-function showYamlPrompt() {
-    return new Promise((resolve) => {
-        const modal = document.getElementById("yamlPrompt");
-        modal.style.display = "block";
-
-        const cleanup = (choice) => {
-            modal.style.display = "none";
-            resolve(choice);
-        };
-
-        document.getElementById("yamlOverwrite").onclick = () => cleanup("overwrite");
-        document.getElementById("yamlMerge").onclick = () => cleanup("merge");
-        document.getElementById("yamlCancel").onclick = () => cleanup("cancel");
-    });
-}
-
-// ----------------- INIT -----------------
-window.addEventListener("load", () => {
-    const saved = localStorage.getItem("theme") || "light";
-    document.body.classList.add(saved);
-    populateDropdowns();
 });
 
+/* ---------------- INIT ---------------- */
+window.onload = function () {
+    populateTemplates();
+    populateVars();
+
+    // Ensure everything starts empty
+    document.getElementById("templateEditor").value = "";
+    document.getElementById("varsContainer").innerHTML = "";
+    document.getElementById("configOutput").innerText = "";
+};

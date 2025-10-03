@@ -5,7 +5,7 @@
     <title>Config Generator</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="dark">
     <header>
         <h1>Config Generator</h1>
         <div class="settings" onclick="toggleTheme()">&#9881;</div>
@@ -18,7 +18,8 @@
             <select id="templateSelect"></select>
             <button onclick="loadTemplate()">Load</button>
         </div>
-        <textarea id="templateEditor"></textarea>
+        <!-- Live update as you type -->
+        <textarea id="templateEditor" onkeyup="liveUpdateFromTemplate()"></textarea>
         <div class="toolbar">
             <div class="left">
                 <input type="file" id="uploadTemplateInput" style="display:none" onchange="uploadTemplate(this)">
@@ -31,7 +32,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- Variables -->
     <div class="pane">
@@ -53,7 +53,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- Generated Config -->
     <div class="pane">
